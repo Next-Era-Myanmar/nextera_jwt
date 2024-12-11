@@ -5,6 +5,8 @@ authors = ["nyan.ucsp <nyan.ucsp@gmail.com>"]
 description = "Next Era JSON Web Token Attribute"
 keywords = ["jwt"]
 edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/Next-Era-Myanmar/nextera_jwt"
 
 [lib]
 proc-macro = true

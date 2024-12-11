@@ -30,7 +30,7 @@ This project provides a custom procedural macro attribute (`#[authentication]`) 
 
     ```rust
     use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
-    use my_crate::authentication; // Assuming your macro is in my_crate
+    use nextera_jwt::authentication;
 
     #[authentication]
     async fn my_protected_handler(req: actix_web::HttpRequest, data: web::Data<AppState>) -> impl Responder {
