@@ -68,6 +68,7 @@ use syn::{parse_macro_input, ItemFn};
 /// *   **HttpRequest Injection:** The macro automatically injects `actix_web::HttpRequest` as the first argument of the decorated function. Make sure your handler function signature is compatible.
 /// *   **Async Functions:** This macro supports `async` functions.
 #[proc_macro_attribute]
+
 pub fn authentication(_args: TokenStream, input: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(input as ItemFn);
 
@@ -101,11 +102,11 @@ pub fn authentication(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 // Validate the token
                 if nextera_utils::jwt::validate_jwt(token, &access_token_secret, &audience).is_err() {
-                    return HttpResponse::Unauthorized().json(ResponseMessage { message: String:from("Invalid credentials")}).finish();
+                    return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String:from("Invalid credentials")}).finish();
                 }
             } else {
                 // Respond with Unauthorized if no Authorization header is present
-                return HttpResponse::Unauthorized().json(ResponseMessage { message: String:from("Invalid credentials")}).finish();
+                return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String:from("Invalid credentials")}).finish();
             }
 
 
