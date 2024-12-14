@@ -101,11 +101,11 @@ pub fn authentication(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 // Validate the token
                 if nextera_utils::jwt::validate_jwt(token, &access_token_secret, &audience).is_err() {
-                    return HttpResponse::Unauthorized().finish();
+                    return HttpResponse::Unauthorized().json(ResponseMessage { message: String:from("Invalid credentials")}).finish();
                 }
             } else {
                 // Respond with Unauthorized if no Authorization header is present
-                return HttpResponse::Unauthorized().finish();
+                return HttpResponse::Unauthorized().json(ResponseMessage { message: String:from("Invalid credentials")}).finish();
             }
 
 
