@@ -90,7 +90,7 @@ pub fn authentication(_args: TokenStream, input: TokenStream) -> TokenStream {
 
             // Get response language
             let default = actix_web::http::header::HeaderValue::from_static("en");
-            let c = req.headers().get("Content-Language").unwrap_or(&default).to_str().unwrap_or("en");
+            let c = actix_web_req.headers().get("Content-Language").unwrap_or(&default).to_str().unwrap_or("en");
             let invalid_credentials = match c {
                 "zh-CN" => "凭证无效",
                 "th" => "ข้อมูลเข้าสู่ระบบไม่ถูกต้อง",

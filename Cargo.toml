@@ -1,6 +1,6 @@
 [package]
 name = "nextera_jwt"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["nyan.ucsp <nyan.ucsp@gmail.com>"]
 description = "Next Era JSON Web Token Attribute"
 keywords = ["jwt"]
