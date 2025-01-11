@@ -88,6 +88,15 @@ pub fn authentication(_args: TokenStream, input: TokenStream) -> TokenStream {
         ) #fn_output {
             use actix_web::HttpResponse;
 
+            // Get response language
+            let default = actix_web::http::header::HeaderValue::from_static("en");
+            let c = req.headers().get("Content-Language").unwrap_or(&default).to_str().unwrap_or("en");
+            let invalid_credentials = match c {
+                "zh-CN" => "凭证无效",
+                "th" => "ข้อมูลเข้าสู่ระบบไม่ถูกต้อง",
+                "mm" => "အထောက်အထားများ မှားယွင်းနေပါသည်",
+                _ => "Invalid credentials"
+            };
             // Extract and validate the Authorization header
             if let Some(auth_header) = actix_web_req.headers().get("Authorization") {
                 let token = auth_header.to_str().unwrap_or("").trim();
@@ -102,11 +111,11 @@ pub fn authentication(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 // Validate the token
                 if nextera_utils::jwt::validate_jwt(token, &access_token_secret, &audience).is_err() {
-                    return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String::from("Invalid credentials")});
+                    return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String::from(invalid_credentials)});
                 }
             } else {
                 // Respond with Unauthorized if no Authorization header is present
-                return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String::from("Invalid credentials")});
+                return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String::from(invalid_credentials)});
             }
 
 
