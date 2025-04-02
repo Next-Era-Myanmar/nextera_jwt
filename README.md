@@ -3,48 +3,63 @@
 This project provides a custom procedural macro attribute (`#[authentication]`) for easily adding JWT (JSON Web Token) authentication to your Actix Web handlers.
 
 ### Add macro to your project
-```shell
+
+```sh
     cargo add nextera_jwt
 ```
 
 ### Prepare your `.env` file
+
 * JWT_AUDIENCE = your_audience_name
 * ACCESS_TOKEN_SECRET = your_access_token_secret
+* REFRESH_TOKEN_SECRET = your_refresh_token_secret
 
 ## Features
 
-*   **Automatic `HttpRequest` Injection:** The macro automatically injects an `actix_web::HttpRequest` instance as the first argument of the decorated function, allowing you to access request information.
-*   **JWT Authentication:** Performs JWT-based authentication by extracting the `Authorization` header from the request and validating the token against a provided secret key and audience.
-*   **Environment Variable Configuration:** Retrieves the JWT audience and secret key from environment variables (`JWT_AUDIENCE` and `ACCESS_TOKEN_SECRET`), promoting secure configuration management.
-*   **Unauthorized Response:** Returns an `HttpResponse::Unauthorized` (401) response if the authentication fails.
-*   **Supports Async Functions:** Compatible with asynchronous handlers.
+* __Automatic `HttpRequest` Injection:__ The macro automatically injects an `actix_web::HttpRequest` instance as the first argument of the decorated function, allowing you to access request information.
+* **JWT Authentication:** Performs JWT-based authentication by extracting the `Authorization` header from the request and validating the token against a provided secret key and audience.
+* __Environment Variable Configuration:__ Retrieves the JWT audience and secret key from environment variables (`JWT_AUDIENCE` and `ACCESS_TOKEN_SECRET`), promoting secure configuration management.
+* **Unauthorized Response:** Returns an `HttpResponse::Unauthorized` (401) response if the authentication fails.
+* **Supports Async Functions:** Compatible with asynchronous handlers.
 
 ## Usage
 
-1.  **Add the Macro to Your Project:**
-    *   Place the macro code (from the provided example) in a separate file (e.g., `src/lib.rs`) within your project.
-    *   Add the path to this file in your `Cargo.toml` under `[lib]` -> `path`.
+1. **Add the Macro to Your Project:**
 
-2.  **Decorate Your Handlers:**
-    *   Apply the `#[authentication]` attribute to the handlers that require authentication:
+   * Place the macro code (from the provided example) in a separate file (e.g., `src/lib.rs`) within your project.
+   * Add the path to this file in your `Cargo.toml` under `[lib]` -> `path`.
 
-    ```rust
-    use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
-    use nextera_jwt::authentication;
+2. **Decorate Your Handlers:**
 
-    #[authentication]
-    async fn my_protected_handler(req: actix_web::HttpRequest, data: web::Data<AppState>) -> impl Responder {
-        // ... your handler logic ...
-    }
-    ```
+* Apply the `#[authentication]` attribute to the handlers that require to check access token:
+* Apply the `#[refresh_authentication]` attribute to the handlers that require to check refresh token:
 
-3.  **Set Environment Variables:**
-    *   Before running your application, set the following environment variables:
-        *   `JWT_AUDIENCE`: The intended audience for the JWT.
-        *   `ACCESS_TOKEN_SECRET`: The secret key used to sign the JWT.
+```rust
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use nextera_jwt::authentication;
+use nextera_jwt::refresh_authentication;
 
-4.  **Run Your Application:**
-    *   Build and run your Actix Web application as usual.
+#[authentication]
+async fn my_protected_handler(req: actix_web::HttpRequest, data: web::Data<AppState>) -> impl Responder {
+    // ... your handler logic ...
+}
+
+#[refresh_authentication]
+async fn my_refresh_protected_handler(req: actix_web::HttpRequest, data: web::Data<AppState>) -> impl Responder {
+    // ... your handler logic ...
+}
+```
+
+3. **Set Environment Variables:**
+
+   * Before running your application, set the following environment variables:
+      * `JWT_AUDIENCE`: The intended audience for the JWT.
+      * `ACCESS_TOKEN_SECRET`: The secret key used to sign the JWT.
+      * `REFRESH_TOKEN_SECRET`: The secret key used to sign the JWT of refresh token.
+
+4. **Run Your Application:**
+
+   * Build and run your Actix Web application as usual.
 
 ## Example
 
@@ -52,11 +67,12 @@ See the `example` directory for a complete, working example demonstrating the us
 
 ## Important Considerations
 
-*   **Error Handling:** The provided example uses basic error handling. For production environments, implement more robust error handling (e.g., handle missing headers gracefully, return appropriate error responses).
-*   **Security:**
-    *   **Never hardcode secrets directly in your code.** Utilize environment variables or a secrets management solution for secure configuration.
-    *   **Regularly rotate your secret keys** to enhance security.
-*   **Dependencies:** This macro may have dependencies on other crates (e.g., for JWT validation). Ensure these dependencies are correctly listed in your `Cargo.toml`.
+* **Error Handling:** The provided example uses basic error handling. For production environments, implement more robust error handling (e.g., handle missing headers gracefully, return appropriate error responses).
+* **Security:**
+   * **Never hardcode secrets directly in your code.** Utilize environment variables or a secrets management solution for secure configuration.
+   * **Regularly rotate your secret keys** to enhance security.
+
+* **Dependencies:** This macro may have dependencies on other crates (e.g., for JWT validation). Ensure these dependencies are correctly listed in your `Cargo.toml`.
 
 ## Contributing
 
