@@ -1,81 +1,148 @@
-# Actix Web Authentication Macro
+# 🛡️ Next Era Actix Web Authentication Macros
 
-This project provides a custom procedural macro attribute (`#[authentication]`) for easily adding JWT (JSON Web Token) authentication to your Actix Web handlers.
+> Procedural macro attributes for seamless JWT and API key-based authentication in [Actix Web](https://actix.rs/), developed by **Next Era Solutions**.
 
-### Add macro to your project
+---
 
-```sh
-    cargo add nextera_jwt
+## ✨ Overview
+
+This crate provides three procedural macro attributes:
+
+- `#[authentication]` — Validates an **Access Token**.
+- `#[refresh_authentication]` — Validates a **Refresh Token**.
+- `#[x_api_key]` — Validates a request using an **X-API-Key**.
+
+All three macros inject an `actix_web::HttpRequest` into your handler, extract headers, validate secrets, and return an `Unauthorized` response if validation fails.
+
+---
+
+## 🚀 Usage
+
+### 1. Add dependencies
+
+Add the following to your `Cargo.toml`:
+
+```toml
+[dependencies]
+actix-web = "4"
+nextera_utils = { path = "../nextera_utils" } # adjust as needed
 ```
 
-### Prepare your `.env` file
+Add the macro crate as a dependency:
 
-* JWT_AUDIENCE = your_audience_name
-* ACCESS_TOKEN_SECRET = your_access_token_secret
-* REFRESH_TOKEN_SECRET = your_refresh_token_secret
+```toml
+[lib]
+proc-macro = true
+```
 
-## Features
+---
 
-* __Automatic `HttpRequest` Injection:__ The macro automatically injects an `actix_web::HttpRequest` instance as the first argument of the decorated function, allowing you to access request information.
-* **JWT Authentication:** Performs JWT-based authentication by extracting the `Authorization` header from the request and validating the token against a provided secret key and audience.
-* __Environment Variable Configuration:__ Retrieves the JWT audience and secret key from environment variables (`JWT_AUDIENCE` and `ACCESS_TOKEN_SECRET`), promoting secure configuration management.
-* **Unauthorized Response:** Returns an `HttpResponse::Unauthorized` (401) response if the authentication fails.
-* **Supports Async Functions:** Compatible with asynchronous handlers.
-
-## Usage
-
-1. **Add the Macro to Your Project:**
-
-   * Place the macro code (from the provided example) in a separate file (e.g., `src/lib.rs`) within your project.
-   * Add the path to this file in your `Cargo.toml` under `[lib]` -> `path`.
-
-2. **Decorate Your Handlers:**
-
-* Apply the `#[authentication]` attribute to the handlers that require to check access token:
-* Apply the `#[refresh_authentication]` attribute to the handlers that require to check refresh token:
+### 2. Define Handlers
 
 ```rust
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
-use nextera_jwt::authentication;
-use nextera_jwt::refresh_authentication;
+use nextera_jwt::{authentication, refresh_authentication, x_api_key};
 
+#[get("/auth")]
 #[authentication]
-async fn my_protected_handler(req: actix_web::HttpRequest, data: web::Data<AppState>) -> impl Responder {
-    // ... your handler logic ...
+pub async fn auth() -> impl Responder {
+    HttpResponse::Ok().body("Valid Access Token")
 }
 
+#[get("/refresh")]
 #[refresh_authentication]
-async fn my_refresh_protected_handler(req: actix_web::HttpRequest, data: web::Data<AppState>) -> impl Responder {
-    // ... your handler logic ...
+async fn refresh() -> impl Responder {
+    HttpResponse::Ok().body("Valid Refresh Token")
+}
+
+#[get("/apikey")]
+#[x_api_key]
+async fn apikey() -> impl Responder {
+    HttpResponse::Ok().body("Valid API Key")
+}
+
+#[get("/")]
+async fn public() -> impl Responder {
+    HttpResponse::Ok().body("Public Endpoint")
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    std::env::set_var("ACCESS_TOKEN_SECRET", "my_access_secret");
+    std::env::set_var("REFRESH_TOKEN_SECRET", "my_refresh_secret");
+    std::env::set_var("X_API_KEY", "my_api_key");
+
+    HttpServer::new(|| {
+        App::new()
+            .service(public)
+            .service(auth)
+            .service(refresh)
+            .service(apikey)
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
 }
 ```
 
-3. **Set Environment Variables:**
+---
 
-   * Before running your application, set the following environment variables:
-      * `JWT_AUDIENCE`: The intended audience for the JWT.
-      * `ACCESS_TOKEN_SECRET`: The secret key used to sign the JWT.
-      * `REFRESH_TOKEN_SECRET`: The secret key used to sign the JWT of refresh token.
+## 🧠 How It Works
 
-4. **Run Your Application:**
+Each macro:
 
-   * Build and run your Actix Web application as usual.
+1. Extracts the corresponding header from `HttpRequest`.
+2. Parses the header for the token or key.
+3. Validates it using:
+    - `nextera_utils::jwt::validate_jwt` for JWT tokens.
+    - Direct comparison for `X_API_KEY`.
+4. If validation fails, responds with:
 
-## Example
+```json
+{ "message": "Invalid credentials" }
+```
 
-See the `example` directory for a complete, working example demonstrating the usage of the authentication macro with Actix Web.
+Supports language-specific messages in:
+- English (default)
+- Chinese (zh-CN)
+- Thai (th)
+- Burmese (mm)
 
-## Important Considerations
+---
 
-* **Error Handling:** The provided example uses basic error handling. For production environments, implement more robust error handling (e.g., handle missing headers gracefully, return appropriate error responses).
-* **Security:**
-   * **Never hardcode secrets directly in your code.** Utilize environment variables or a secrets management solution for secure configuration.
-   * **Regularly rotate your secret keys** to enhance security.
+## ⚠️ Important Notes
 
-* **Dependencies:** This macro may have dependencies on other crates (e.g., for JWT validation). Ensure these dependencies are correctly listed in your `Cargo.toml`.
+- **Async Support:** All macros work on async handlers.
+- **HttpRequest Injection:** `HttpRequest` is auto-injected as the first argument.
+- **Error Handling:** Currently uses `.unwrap_or("")` and `.expect`. Improve error handling for production use.
+- **Environment Variables:**
+    - `ACCESS_TOKEN_SECRET`
+    - `REFRESH_TOKEN_SECRET`
+    - `X_API_KEY`
+- **Dependency:** Requires `nextera_utils` crate for JWT handling and shared types.
 
-## Contributing
+---
 
-Contributions are welcome! Please feel free to submit pull requests or open issues for any improvements or bug fixes.
+## 📂 Project Structure
 
-This `README.md` provides a comprehensive overview of the project, its features, usage, and important considerations. Remember to adapt it further based on your specific project needs and any additional functionalities you may implement.
+```
+nextera_jwt/
+├── src/
+│   ├── lib.rs               # Procedural macro implementations
+├── Cargo.toml
+├── README.md
+```
+
+---
+
+## 📜 License
+
+This project is licensed under the [MIT License](LICENSE). Free for personal and commercial use.
+
+---
+
+## 👨‍💻 Developed By
+
+**Next Era Solutions**
+
+Crafting secure and modular backend solutions for modern Rust web apps.
