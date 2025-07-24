@@ -1,18 +1,33 @@
 # Next Era Actix Web Authentication Macro
 
-**Next Era Solutions** provides a procedural macro-based authentication system for Actix Web using JWT and API Key mechanisms.
+This crate provides procedural macro attributes to easily secure Actix Web endpoints using JWTs and API keys. Developed by **Next Era Solutions**.
 
-## ✨ Features
+## ✨ Provided Macros
 
-- ✅ Simple attribute macros for securing routes:
-    - `#[authentication]` — Validates access tokens.
-    - `#[refresh_authentication]` — Validates refresh tokens.
-    - `#[x_api_key]` — Validates API key headers.
-- 🌍 Multilingual error messages (`en`, `zh-CN`, `th`, `mm`).
-- 🔐 Environment variable-based secret management.
-- 🔧 Easy to integrate with `actix_web`.
+- `#[authentication]`: Validates **access tokens** using the `Authorization` header.
+- `#[refresh_authentication]`: Validates **refresh tokens** using the `Authorization` header.
+- `#[x_api_key]`: Validates requests using the `X-API-Key` header.
 
-## 🚀 Usage Example
+## 🔐 JWT Authentication Flow
+
+1. Extracts the token from `Authorization: Bearer <token>`.
+2. Loads secrets from environment:
+   - `ACCESS_TOKEN_SECRET`
+   - `REFRESH_TOKEN_SECRET`
+   - `JWT_AUDIENCE`
+3. Uses `nextera_utils::jwt::validate_jwt()` for validation.
+4. Returns 401 or 419 (session expired) based on JWT errors.
+5. Injects `HttpRequest` into your handler function.
+
+## 🌐 Localization
+
+Supports localization based on `Content-Language` header:
+- `en` (default)
+- `zh-CN`
+- `th`
+- `mm`
+
+## 🧪 Example Usage
 
 ```rust
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
@@ -29,54 +44,25 @@ async fn refresh_auth() -> impl Responder {
 }
 
 #[x_api_key]
-async fn x_api_key_route() -> impl Responder {
+async fn x_api_key() -> impl Responder {
     HttpResponse::Ok().body("Valid X API Key")
 }
 ```
 
-## ✅ Environment Variables
+## ✅ Required Environment Variables
 
-| Variable               | Description                         |
-|------------------------|-------------------------------------|
-| `ACCESS_TOKEN_SECRET`  | Secret key for validating JWT access tokens |
-| `REFRESH_TOKEN_SECRET` | Secret key for validating JWT refresh tokens |
-| `JWT_AUDIENCE`         | Expected JWT audience claim         |
-| `X_API_KEY`            | API key used in `X-API-Key` header  |
+| Variable               | Purpose                          |
+|------------------------|----------------------------------|
+| `ACCESS_TOKEN_SECRET`  | Secret for validating access JWT |
+| `REFRESH_TOKEN_SECRET` | Secret for validating refresh JWT|
+| `JWT_AUDIENCE`         | Audience claim for validation    |
+| `X_API_KEY`            | API key expected in header       |
 
-Set these before running your application.
+## ⚠️ Warnings
 
-## 🧪 Tests
-
-Unit tests demonstrate how the macros work:
-
-```rust
-#[actix_web::test]
-async fn test_access_and_refresh_token() {
-    // Setup, generate tokens, and test both access and refresh endpoints
-}
-```
-
-```rust
-#[actix_web::test]
-async fn test_api_key() {
-    // Setup and validate X-API-Key logic
-}
-```
-
-## ⚠️ Considerations
-
-- The current implementation uses `unwrap_or("")` and `expect()`. Add error handling before using in production.
-- Injects `HttpRequest` automatically into handlers — ensure compatibility with your handler signatures.
-- Requires `nextera_utils` crate for token validation.
-
-## 📦 Cargo.toml Example
-
-```toml
-[dependencies]
-actix-web = "4"
-nextera_utils = { path = "../nextera_utils" } # Or use crate version
-nextera_jwt = { path = "../nextera_jwt" }
-```
+- Current version uses `unwrap_or` and `expect()`; improve error handling for production.
+- Automatically injects `HttpRequest` as first argument in handler.
+- Requires `nextera_utils` crate.
 
 ## 📜 License
 
