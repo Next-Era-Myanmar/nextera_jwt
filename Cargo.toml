@@ -1,6 +1,6 @@
 [package]
 name = "nextera_jwt"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["nyan.ucsp <nyan.ucsp@gmail.com>"]
 description = "Next Era JSON Web Token Attribute"
 keywords = ["jwt"]
@@ -16,4 +16,4 @@ quote = "1.0.37"
 proc-macro2 = "1.0.92"
 syn = { version = "2.0.90", features = ["full"] }
 actix-web = "4.9.0"
-nextera_utils = "0.1.15"
+nextera_utils = "0.1.16"

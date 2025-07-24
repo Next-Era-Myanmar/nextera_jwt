@@ -8,17 +8,16 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, ItemFn};
 
-//// A procedural macro attribute for adding authentication to Actix Web handlers.
-///
+//// A procedural macro attribute for adding authentication to"Valid Token".to_string(ng(///
 /// This macro automatically injects an `actix_web::HttpRequest` parameter into the decorated function
-/// and performs JWT (JSON Web Token) based authentication. It expects a Bearer token in the
+/// and perform"Valid Refresh Token".to_string(ng(authentication. It expects a Bearer token in the
 /// `Authorization` header of the incoming request.
 ///
 /// # How it Works
 ///
 /// 1.  **Header Extraction:** It extracts the `Authorization` header from the incoming request.
 /// 2.  **Bearer Token Parsing:** It expects the header value to be in the format "Bearer <token>" and extracts the token.
-/// 3.  **Environment Variables:** It retrieves the JWT secret key from environment variables named  `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET`, respectively. Make sure these are set before running your application.
+/// 3.  **Environment Variables:** It retrieves the JWT secret key from environment variables named  `ACCESS_TOKEN_SECRET`,`REFRESH_TOKEN_SECRET` and `JWT_AUDIENCE`, respectively. Make sure these are set before running your application.
 /// 4.  **Token Validation:** It uses the `nextera_utils::jwt::validate_jwt` function to validate the token against the provided secret.
 /// 5.  **Authorization:** If the token is valid, the original handler function is executed. Otherwise, an `HttpResponse::Unauthorized` (401) response is returned.
 ///
@@ -30,49 +29,70 @@ use syn::{parse_macro_input, ItemFn};
 /// use nextera_jwt::refresh_authentication;
 /// use nextera_jwt::x_api_key;
 ///
-/// #[get("/auth")]
 /// #[authentication]
 /// pub async fn auth() -> impl Responder {
-///     HttpResponse::Ok().body(format!("Valid Token"))
+///     HttpResponse::Ok().body("Valid Token")
 /// }
 ///
-/// #[get("/refresh")]
 /// #[refresh_authentication]
 /// async fn refresh_auth() -> impl Responder {
-///     HttpResponse::Ok().body(format!("Valid Refresh Token"))
+///     HttpResponse::Ok().body("Valid Refresh Token")
 /// }
 ///
-/// #[get("/apikey")]
 /// #[x_api_key]
 /// async fn x_api_key() -> impl Responder {
 ///     HttpResponse::Ok().body("Valid X API Key")
 /// }
 ///
-/// #[get("/")]
-/// async fn public_handler() -> impl Responder {
-///     HttpResponse::Ok().body("Public Endpoint!")
+///
+/// #[actix_web::test]
+/// async fn test_access_and_refresh_token() {
+///     use nextera_utils::jwt;
+///     use actix_web::test;
+///
+///     std::env::set_var("ACCESS_TOKEN_SECRET", "test_secret");
+///     std::env::set_var("REFRESH_TOKEN_SECRET", "test_secret");
+///     std::env::set_var("JWT_AUDIENCE", "test_jwt_audience");
+///
+///     let app =
+///         test::init_service(App::new().route("/auth", web::get().to(auth)).route("/refresh", web::get().to(refresh_auth))).await;
+///
+///     let (token, _) =
+///         jwt::generate_jwt(1, 1, "test_secret", 3600, "session_uuid", "test_jwt_audience")
+///             .expect("Failed to generate access token");
+///
+///     let req = test::TestRequest::get()
+///         .uri("/auth")
+///         .insert_header(("Authorization", format!("Bearer {}", token)))
+///         .to_request();
+///
+///     let resp = test::call_service(&app, req).await;
+///     assert_eq!(resp.status(), 200);
+///
+///     let ref_req = test::TestRequest::get()
+///         .uri("/refresh")
+///         .insert_header(("Authorization", format!("Bearer {}", token)))
+///         .to_request();
+///
+///     let ref_resp = test::call_service(&app, ref_req).await;
+///     assert_eq!(ref_resp.status(), 200);
 /// }
 ///
-/// #[actix_web::main]
-/// async fn main() -> std::io::Result<()> {
-///     std::env::set_var("ACCESS_TOKEN_SECRET", "my_secret_key");
-///     std::env::set_var("REFRESH_TOKEN_SECRET", "my_secret_key");
-///     std::env::set_var("X_API_KEY", "my_api_key");
+/// #[actix_web::test]
+/// async fn test_api_key() {
+///     use actix_web::test;
 ///
-///     HttpServer::new(|| {
-///         App::new()
-///             .service(public_handler)
-///             .service(auth)
-///             .service(refresh_auth)
-///             .service(x_api_key)
-///     })
-///     .bind(("127.0.0.1", 8080))?
-///     .run()
-///     .await
-/// }
+///     std::env::set_var("X_API_KEY", "test_api_key");
 ///
-/// struct AppState {
-///     app_name: String,
+///     let app = test::init_service(App::new().route("/apikey", web::get().to(x_api_key))).await;
+///
+///     let req = test::TestRequest::get()
+///         .uri("/apikey")
+///         .insert_header(("X-API-Key", "test_api_key"))
+///         .to_request();
+///
+///     let resp = test::call_service(&app, req).await;
+///     assert_eq!(resp.status(), 200);
 /// }
 /// ```
 ///
@@ -80,7 +100,7 @@ use syn::{parse_macro_input, ItemFn};
 ///
 /// *   **Error Handling:** The current implementation uses `unwrap_or("")` on the header value and `expect` for environment variables. For production, more robust error handling should be implemented (e.g., returning `HttpResponse::BadRequest` for malformed headers).
 /// *   **Dependency:** This macro depends on the `nextera_utils::jwt` crate, which needs to be included in your `Cargo.toml`.
-/// *   **Environment Variables:** Ensure `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET` and `X_API_KEY` are set in your environment. Never hardcode secrets in your source code. Consider using a secrets management solution for production.
+/// *   **Environment Variables:** Ensure `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, `JWT_AUDIENCE` and `X_API_KEY` are set in your environment. Never hardcode secrets in your source code. Consider using a secrets management solution for production.
 /// *   **HttpRequest Injection:** The macro automatically injects `actix_web::HttpRequest` as the first argument of the decorated function. Make sure your handler function signature is compatible.
 /// *   **Async Functions:** This macro supports `async` functions.
 #[proc_macro_attribute]
@@ -122,9 +142,11 @@ pub fn authentication(_args: TokenStream, input: TokenStream) -> TokenStream {
                 // Load environment variables
                 let access_token_secret = std::env::var("ACCESS_TOKEN_SECRET")
                     .expect("Failed to get ACCESS_TOKEN_SECRET from environment");
+                let audience = std::env::var("JWT_AUDIENCE")
+                    .expect("Failed to get JWT_AUDIENCE from environment");
 
                 // Validate the token
-                if nextera_utils::jwt::validate_jwt(token, &access_token_secret).is_err() {
+                if nextera_utils::jwt::validate_jwt(token, &access_token_secret, &audience).is_err() {
                     return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String::from(invalid_credentials)});
                 }
             } else {
@@ -181,9 +203,11 @@ pub fn refresh_authentication(_args: TokenStream, input: TokenStream) -> TokenSt
                 // Load environment variables
                 let refresh_token_secret = std::env::var("REFRESH_TOKEN_SECRET")
                     .expect("Failed to get REFRESH_TOKEN_SECRET from environment");
+                let audience = std::env::var("JWT_AUDIENCE")
+                    .expect("Failed to get JWT_AUDIENCE from environment");
 
                 // Validate the token
-                if nextera_utils::jwt::validate_jwt(token, &refresh_token_secret).is_err() {
+                if nextera_utils::jwt::validate_jwt(token, &refresh_token_secret, &audience).is_err() {
                     return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String::from(invalid_credentials)});
                 }
             } else {
