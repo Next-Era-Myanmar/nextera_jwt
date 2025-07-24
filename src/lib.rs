@@ -132,6 +132,13 @@ pub fn authentication(_args: TokenStream, input: TokenStream) -> TokenStream {
                 "mm" => "အထောက်အထားများ မှားယွင်းနေပါသည်",
                 _ => "Invalid credentials"
             };
+
+            let session_expired = match c {
+                "zh-CN" => "会话已过期",
+                "th" => "เซสชั่นหมดอายุแล้ว",
+                "mm" => "စက်ရှင် သက်တမ်းကုန်သွားပါပြီ",
+                _ => "Session Expired"
+            };
             // Extract and validate the Authorization header
             if let Some(auth_header) = actix_web_req.headers().get("Authorization") {
                 let token = auth_header.to_str().unwrap_or("").trim();
@@ -146,8 +153,18 @@ pub fn authentication(_args: TokenStream, input: TokenStream) -> TokenStream {
                     .expect("Failed to get JWT_AUDIENCE from environment");
 
                 // Validate the token
-                if nextera_utils::jwt::validate_jwt(token, &access_token_secret, &audience).is_err() {
-                    return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String::from(invalid_credentials)});
+                if let Err(e) = nextera_utils::jwt::validate_jwt(token, &access_token_secret, &audience) {
+                    // You've already got the error 'e' here, no need to call unwrap_err()
+                    return if e.kind() == &jsonwebtoken::errors::ErrorKind::ExpiredSignature {
+                        HttpResponse::build(actix_web::http::StatusCode::from_u16(419).unwrap())
+                            .json(nextera_utils::models::response_message::ResponseMessage {
+                                message: String::from(session_expired)
+                            })
+                    } else {
+                        HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage {
+                            message: String::from(invalid_credentials)
+                        })
+                    };
                 }
             } else {
                 // Respond with Unauthorized if no Authorization header is present
@@ -193,6 +210,13 @@ pub fn refresh_authentication(_args: TokenStream, input: TokenStream) -> TokenSt
                 _ => "Invalid credentials"
             };
 
+            let session_expired = match c {
+                "zh-CN" => "会话已过期",
+                "th" => "เซสชั่นหมดอายุแล้ว",
+                "mm" => "စက်ရှင် သက်တမ်းကုန်သွားပါပြီ",
+                _ => "Session Expired"
+            };
+
             // Extract and validate the Authorization header
             if let Some(auth_header) = actix_web_req.headers().get("Authorization") {
                 let token = auth_header.to_str().unwrap_or("").trim();
@@ -207,8 +231,18 @@ pub fn refresh_authentication(_args: TokenStream, input: TokenStream) -> TokenSt
                     .expect("Failed to get JWT_AUDIENCE from environment");
 
                 // Validate the token
-                if nextera_utils::jwt::validate_jwt(token, &refresh_token_secret, &audience).is_err() {
-                    return HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage { message: String::from(invalid_credentials)});
+                if let Err(e) = nextera_utils::jwt::validate_jwt(token, &refresh_token_secret, &audience) {
+                    // You've already got the error 'e' here, no need to call unwrap_err()
+                    return if e.kind() == &jsonwebtoken::errors::ErrorKind::ExpiredSignature {
+                        HttpResponse::build(actix_web::http::StatusCode::from_u16(419).unwrap())
+                            .json(nextera_utils::models::response_message::ResponseMessage {
+                                message: String::from(session_expired)
+                            })
+                    } else {
+                        HttpResponse::Unauthorized().json(nextera_utils::models::response_message::ResponseMessage {
+                            message: String::from(invalid_credentials)
+                        })
+                    };
                 }
             } else {
                 // Respond with Unauthorized if no Authorization header is present

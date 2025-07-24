@@ -25,9 +25,15 @@ async fn test_protected_handler_valid_token() {
     let app =
         test::init_service(App::new().route("/protected", web::get().to(protected_handler))).await;
 
-    let (token, _) =
-        jwt::generate_jwt(1, 1, "test_access_secret", 3600, "session_uuid", "test_jwt_audience")
-            .expect("Failed to generate access token");
+    let (token, _) = jwt::generate_jwt(
+        1,
+        1,
+        "test_access_secret",
+        3600,
+        "session_uuid",
+        "test_jwt_audience",
+    )
+    .expect("Failed to generate access token");
 
     let req = test::TestRequest::get()
         .uri("/protected")
